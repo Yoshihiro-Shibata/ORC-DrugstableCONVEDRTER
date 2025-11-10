@@ -1,0 +1,1817 @@
+﻿
+<html><head><meta charset='UTF-8'>
+<style>
+body {
+  font-family: 'Meiryo', sans-serif;
+  font-size: 7pt;
+  margin: 12mm;
+}
+
+/* ===== テーブル全体 ===== */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  border: 1px solid #999;
+}
+
+th, td {
+  border: 1px solid #999;
+  padding: 2px 3px;
+  line-height: 1.05;
+  word-wrap: break-word;
+}
+
+/* ===== 行の高さ調整 ===== */
+td {
+  min-height: 2.4em;  /* 2行分くらいの高さを確保 */
+  height: 2.4em;      /* 固定高さとしても適用（印刷で安定） */
+}
+
+/* ===== ヘッダー ===== */
+th {
+  background: #f3f3f3;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ===== 各列の幅指定 ===== */
+/* ※ 合計100%を維持するようバランス調整 */
+th:nth-child(1), td:nth-child(1) { width: 70px; text-align: center; }   /* 薬品コード */
+th:nth-child(2), td:nth-child(2) { width: 60px; text-align: center; }   /* カセットNo */
+th:nth-child(3), td:nth-child(3) { width: 26%; text-align: left; }      /* 薬品名称（広め） */
+th:nth-child(4), td:nth-child(4) { width: 55px; text-align: center; }   /* 差分 */
+th:nth-child(5), td:nth-child(5) { width: 55px; text-align: center; }   /* 補充数 */
+th:nth-child(6), td:nth-child(6) { width: 13%; text-align: left; }      /* 備考（やや広め） */
+th:nth-child(7), td:nth-child(7) { width: 55px; text-align: center; }   /* 使用量（月平均） */
+th:nth-child(8), td:nth-child(8) { width: 55px; text-align: center; }   /* 現在量 */
+th:nth-child(9), td:nth-child(9) { width: 100px; text-align: center; }   /* 最終更新日 */
+
+/* === 重要エリア（カセットNo〜備考）を淡いグレーで強調 === */
+td:nth-child(2),
+td:nth-child(3),
+td:nth-child(4),
+td:nth-child(5),
+td:nth-child(6) {
+  background-color: #f7f7f7 !important; /* ごく淡いグレー (#f5f5f5 〜 #f7f7f7 が自然) */
+  font-weight: 500;                     /* 少しだけ太字にして視線誘導 */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* 境界線をやや強調してブロック感を出す */
+td:nth-child(2) {
+  border-left: 2px solid #aaa;  /* 左端を濃いグレーで引き締める */
+}
+td:nth-child(6) {
+  border-right: 2px solid #aaa; /* 備考の右側も締める */
+}
+
+/* 補充行（黄色）との重なりを自然にするため上書き設定 */
+tr.highlight td:nth-child(2),
+tr.highlight td:nth-child(3),
+tr.highlight td:nth-child(4),
+tr.highlight td:nth-child(5),
+tr.highlight td:nth-child(6) {
+  background-color: #fff7ce !important; /* 補充対象行は黄色を優先 */
+  font-weight: bold;
+}
+
+
+
+/* ===== 行スタイル ===== */
+tr.highlight td { background-color: #fff7ce !important; }  /* 黄色強調: 印刷でも残る */
+tr.blue td { color: #0044cc; }
+tr.noneed td { opacity: 0.6; }
+
+/* ===== 補充数セルの特別装飾 ===== */
+.replenish-highlight {
+  color: red;
+  font-weight: bold;
+}
+
+/* ===== 太字強調（補充行の特定列） ===== */
+.bold-col {
+  font-weight: bold;
+}
+
+/* ===== 印刷対応設定 ===== */
+@media print {
+  body { margin: 5mm; }
+  th { 
+    background: #f3f3f3 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  tr.highlight td {
+    background-color: #fff7ce !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  thead { display: table-header-group; }  /* ページ繰り返し */
+}
+</style>
+</head><body>
+<h2>カセット × 使用量 マージ結果（カセット番号あり）</h2>
+
+<table>
+<thead>
+<tr>
+  <th>薬品コード</th>
+  <th>カセットNo</th>
+  <th>薬品名称</th>
+  <th>差分</th>
+  <th>補充数</th>
+  <th>備考</th>
+  <th>使用量（月平均）※</th>
+  <th>現在量</th>
+  <th>最終更新日</th>
+</tr>
+</thead>
+<tbody>
+
+    <tr class='highlight'>
+        <td>002256</td>
+        <td><span class='bold-col'>1-007</span></td>
+        <td><span class='bold-col'>ニフェジピンCR錠 20mg 「トーワ」</span></td>
+        <td><span class='bold-col'>120</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>141</td>
+        <td>21</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002381</td>
+        <td><span class='bold-col'>1-010</span></td>
+        <td><span class='bold-col'>ベニジピン塩酸塩錠4mg 「サワイ」</span></td>
+        <td><span class='bold-col'>110</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>122</td>
+        <td>12</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000597</td>
+        <td><span class='bold-col'>1-011</span></td>
+        <td><span class='bold-col'>コントミン糖衣錠 100mg</span></td>
+        <td><span class='bold-col'>32</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>35</td>
+        <td>3</td>
+        <td>2025/10/08</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000669</td>
+        <td>1-012</td>
+        <td>ジゴシン錠 0.125mg</td>
+        <td>-18</td>
+        <td>0</td>
+        <td></td>
+        <td>24</td>
+        <td>42</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003029</td>
+        <td>1-013</td>
+        <td>セレコキシブ 錠 100mg 「ニプロ」</td>
+        <td>20</td>
+        <td>0</td>
+        <td></td>
+        <td>66</td>
+        <td>46</td>
+        <td>2025/10/04</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003056</td>
+        <td>1-014</td>
+        <td>ハロペリドール錠 3mg 「アメル」</td>
+        <td>-38</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>38</td>
+        <td>2025/06/11</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002432</td>
+        <td>1-015</td>
+        <td>クエチアピン錠 100mg 「アメル」</td>
+        <td>5</td>
+        <td>0</td>
+        <td></td>
+        <td>153</td>
+        <td>148</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000920</td>
+        <td><span class='bold-col'>1-016</span></td>
+        <td><span class='bold-col'>チラージンS錠 50μg</span></td>
+        <td><span class='bold-col'>68</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>92</td>
+        <td>24</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000326</td>
+        <td>1-017</td>
+        <td>エビリファイ錠 12mg</td>
+        <td>-5</td>
+        <td>0</td>
+        <td></td>
+        <td>9</td>
+        <td>14</td>
+        <td>2025/08/19</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002440</td>
+        <td>1-018</td>
+        <td>ベラプロストNa錠 20μg 「NIG」</td>
+        <td>-38</td>
+        <td>0</td>
+        <td></td>
+        <td>17</td>
+        <td>55</td>
+        <td>2025/05/01</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002258</td>
+        <td><span class='bold-col'>1-023</span></td>
+        <td><span class='bold-col'>ニフェジピンCR錠 40mg 「トーワ」</span></td>
+        <td><span class='bold-col'>195</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>209</td>
+        <td>14</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002458</td>
+        <td><span class='bold-col'>1-024</span></td>
+        <td><span class='bold-col'>トラゾドン塩酸塩錠 50mg 「アメル」</span></td>
+        <td><span class='bold-col'>36</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>62</td>
+        <td>26</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000490</td>
+        <td>1-025</td>
+        <td>カロナール錠500mg</td>
+        <td>-45</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>45</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003207</td>
+        <td>1-028</td>
+        <td>エルデカルシトールカプセル0.5μg 「サワイ」</td>
+        <td>-21</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>21</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003423</td>
+        <td>1-030</td>
+        <td>エスシタロプラム錠 10mg 「トーワ」</td>
+        <td>-49</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>49</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>000113</td>
+        <td>1-031</td>
+        <td>アムロジピンOD錠 5mg「トーワ」</td>
+        <td>-103</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>0</td>
+        <td>103</td>
+        <td>2025/10/17</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002465</td>
+        <td>1-033</td>
+        <td>リスペリドンOD錠 1mg「トーワ」</td>
+        <td>-151</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>151</td>
+        <td>2025/09/01</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000112</td>
+        <td>1-034</td>
+        <td>アムロジピンOD錠 2.5mg「トーワ」</td>
+        <td>-42</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>42</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002431</td>
+        <td>1-043</td>
+        <td>クエチアピン錠 25mg「アメル」</td>
+        <td>-210</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>210</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003087</td>
+        <td>1-045</td>
+        <td>(糖)グリメピリド錠 0.5mg「NP」</td>
+        <td>-36</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>36</td>
+        <td>2025/10/08</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003269</td>
+        <td>1-053</td>
+        <td>ミルタザピン錠 15mg「明治」</td>
+        <td>-319</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>319</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002433</td>
+        <td>1-054</td>
+        <td>クエチアピン錠 200mg「アメル」</td>
+        <td>-35</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>35</td>
+        <td>2025/10/27</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002657</td>
+        <td>1-055</td>
+        <td>アルファカルシドール錠 0.25μg「アメル」</td>
+        <td>-21</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>21</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002841</td>
+        <td>1-056</td>
+        <td>オルケディア錠 1mg</td>
+        <td>-100</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>100</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002575</td>
+        <td>1-057</td>
+        <td>ビムパット錠 100mg</td>
+        <td>-11</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>11</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001649</td>
+        <td>1-059</td>
+        <td>(糖)メトグルコ錠 250mg</td>
+        <td>-380</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>0</td>
+        <td>380</td>
+        <td>2025/09/30</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003035</td>
+        <td><span class='bold-col'>1-060</span></td>
+        <td><span class='bold-col'>ガランタミンOD錠 4mg「アメル」</span></td>
+        <td><span class='bold-col'>140</span></td>
+        <td><span class='replenish-highlight'>140</span></td>
+        <td>14錠シート</td>
+        <td>152</td>
+        <td>12</td>
+        <td>2025/10/27</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003346</td>
+        <td><span class='bold-col'>1-061</span></td>
+        <td><span class='bold-col'>炭酸リチウム錠 200mg「大正」</span></td>
+        <td><span class='bold-col'>367</span></td>
+        <td><span class='replenish-highlight'>400</span></td>
+        <td></td>
+        <td>369</td>
+        <td>2</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002467</td>
+        <td><span class='bold-col'>1-065</span></td>
+        <td><span class='bold-col'>リスペリドンOD錠 2mg「トーワ」</span></td>
+        <td><span class='bold-col'>82</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>99</td>
+        <td>17</td>
+        <td>2025/10/10</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002913</td>
+        <td>1-066</td>
+        <td>シロドシンOD錠 4mg「ケミファ」</td>
+        <td>61</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>288</td>
+        <td>227</td>
+        <td>2025/10/23</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002626</td>
+        <td>1-067</td>
+        <td>オランザピンOD錠 10mg「トーワ」</td>
+        <td>-34</td>
+        <td>0</td>
+        <td></td>
+        <td>28</td>
+        <td>62</td>
+        <td>2025/09/01</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002624</td>
+        <td>1-068</td>
+        <td>オランザピンOD錠 5mg「トーワ」</td>
+        <td>-97</td>
+        <td>0</td>
+        <td></td>
+        <td>86</td>
+        <td>183</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000124</td>
+        <td><span class='bold-col'>1-070</span></td>
+        <td><span class='bold-col'>アリナミンF糖衣錠 25mg</span></td>
+        <td><span class='bold-col'>129</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>169</td>
+        <td>40</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003383</td>
+        <td><span class='bold-col'>1-075</span></td>
+        <td><span class='bold-col'>アジルサルタン錠 20mg「ニプロ」</span></td>
+        <td><span class='bold-col'>206</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>210</td>
+        <td>4</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002379</td>
+        <td>1-077</td>
+        <td>ドキサゾシン錠 1mg「テバ」</td>
+        <td>4</td>
+        <td>0</td>
+        <td></td>
+        <td>40</td>
+        <td>36</td>
+        <td>2025/10/28</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002389</td>
+        <td><span class='bold-col'>1-078</span></td>
+        <td><span class='bold-col'>アゾセミド錠 30mg「JG」</span></td>
+        <td><span class='bold-col'>278</span></td>
+        <td><span class='replenish-highlight'>300</span></td>
+        <td></td>
+        <td>331</td>
+        <td>53</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002423</td>
+        <td>1-079</td>
+        <td>エピナスチン塩酸塩錠 20mg「トーワ」</td>
+        <td>24</td>
+        <td>0</td>
+        <td></td>
+        <td>48</td>
+        <td>24</td>
+        <td>2025/10/22</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000336</td>
+        <td><span class='bold-col'>1-082</span></td>
+        <td><span class='bold-col'>エブランチルカプ セル 15mg</span></td>
+        <td><span class='bold-col'>410</span></td>
+        <td><span class='replenish-highlight'>500</span></td>
+        <td></td>
+        <td>444</td>
+        <td>34</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001310</td>
+        <td>1-084</td>
+        <td>フォリアミン錠 5mg</td>
+        <td>102</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>116</td>
+        <td>14</td>
+        <td>2025/10/06</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002689</td>
+        <td>1-085</td>
+        <td>クロピドグレル錠 75mg「トーワ」</td>
+        <td>13</td>
+        <td>0</td>
+        <td></td>
+        <td>89</td>
+        <td>76</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002702</td>
+        <td><span class='bold-col'>1-086</span></td>
+        <td><span class='bold-col'>シルニジピン錠 10mg「サワイ」</span></td>
+        <td><span class='bold-col'>74</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>83</td>
+        <td>9</td>
+        <td>2025/10/17</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000332</td>
+        <td><span class='bold-col'>1-087</span></td>
+        <td><span class='bold-col'>エフィエント錠 3.75mg</span></td>
+        <td><span class='bold-col'>164</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>193</td>
+        <td>29</td>
+        <td>2025/10/30</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000342</td>
+        <td>1-088</td>
+        <td>エリキュース錠2.5mg</td>
+        <td>-68</td>
+        <td>0</td>
+        <td></td>
+        <td>79</td>
+        <td>147</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002279</td>
+        <td><span class='bold-col'>1-089</span></td>
+        <td><span class='bold-col'>クエン酸第一鉄Na錠50mg「サワイ」</span></td>
+        <td><span class='bold-col'>192</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>281</td>
+        <td>89</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000519</td>
+        <td>1-090</td>
+        <td>(糖)グラクティブ錠 50mg</td>
+        <td>14</td>
+        <td>0</td>
+        <td></td>
+        <td>132</td>
+        <td>118</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002688</td>
+        <td>1-091</td>
+        <td>クロピ ドグレル錠 25mg「トーワ」</td>
+        <td>-51</td>
+        <td>0</td>
+        <td></td>
+        <td>7</td>
+        <td>58</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003084</td>
+        <td><span class='bold-col'>1-092</span></td>
+        <td><span class='bold-col'>タムスロシン塩酸塩OD錠0.2mg「トーワ」</span></td>
+        <td><span class='bold-col'>67</span></td>
+        <td><span class='replenish-highlight'>70</span></td>
+        <td>14錠シート</td>
+        <td>103</td>
+        <td>36</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002171</td>
+        <td><span class='bold-col'>1-093</span></td>
+        <td><span class='bold-col'>タケキャブ 錠 20mg</span></td>
+        <td><span class='bold-col'>49</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>79</td>
+        <td>30</td>
+        <td>2025/10/23</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002730</td>
+        <td><span class='bold-col'>1-094</span></td>
+        <td><span class='bold-col'>リクシアナOD錠 30mg</span></td>
+        <td><span class='bold-col'>77</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>130</td>
+        <td>53</td>
+        <td>2025/09/01</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002510</td>
+        <td>1-095</td>
+        <td>ビソプロロールフマル酸塩錠 0.625mg</td>
+        <td>31</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>167</td>
+        <td>136</td>
+        <td>2025/09/17</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002512</td>
+        <td><span class='bold-col'>1-096</span></td>
+        <td><span class='bold-col'>ビソプロロールフマル酸塩錠 2.5mg</span></td>
+        <td><span class='bold-col'>128</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>326</td>
+        <td>198</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003256</td>
+        <td><span class='bold-col'>1-097</span></td>
+        <td><span class='bold-col'>フェブキソスタット錠 10mg「トーワ」</span></td>
+        <td><span class='bold-col'>83</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>176</td>
+        <td>93</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003257</td>
+        <td><span class='bold-col'>1-098</span></td>
+        <td><span class='bold-col'>フェブキソスタット錠 20mg「トーワ」</span></td>
+        <td><span class='bold-col'>156</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>166</td>
+        <td>10</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001605</td>
+        <td>1-099</td>
+        <td>ミヤBM錠</td>
+        <td>363</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>824</td>
+        <td>461</td>
+        <td>2025/10/28</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002747</td>
+        <td>1-100</td>
+        <td>オルメサルタンOD錠 20mg「トーワ」</td>
+        <td>-114</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>183</td>
+        <td>297</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002275</td>
+        <td><span class='bold-col'>1-101</span></td>
+        <td><span class='bold-col'>ダイフェン配合錠</span></td>
+        <td><span class='bold-col'>52</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>231</td>
+        <td>179</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000598</td>
+        <td>1-103</td>
+        <td>コントミゾ糖衣錠 12.5mg</td>
+        <td>-3</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>3</td>
+        <td>2024/11/11</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000599</td>
+        <td>1-105</td>
+        <td>コントミン糖衣錠 25mg</td>
+        <td>3</td>
+        <td>0</td>
+        <td></td>
+        <td>4</td>
+        <td>1</td>
+        <td>2025/09/17</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002578</td>
+        <td>1-109</td>
+        <td>カルベジロール錠 10mg 「サワイ」</td>
+        <td>276</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>373</td>
+        <td>97</td>
+        <td>2025/09/11</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>000004</td>
+        <td>1-110</td>
+        <td>アーテン錠 2mg</td>
+        <td>107</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>140</td>
+        <td>33</td>
+        <td>2025/10/06</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002252</td>
+        <td>1-111</td>
+        <td>一硝酸イソルビド 錠20mg 「サワイ</td>
+        <td>-2</td>
+        <td>0</td>
+        <td></td>
+        <td>9</td>
+        <td>11</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000016</td>
+        <td>1-112</td>
+        <td>アキネトン錠 1mg</td>
+        <td>23</td>
+        <td>0</td>
+        <td></td>
+        <td>78</td>
+        <td>55</td>
+        <td>2025/10/08</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000042</td>
+        <td><span class='bold-col'>1-113</span></td>
+        <td><span class='bold-col'>アストミン錠 10mg</span></td>
+        <td><span class='bold-col'>58</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>73</td>
+        <td>15</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>000047</td>
+        <td>1-114</td>
+        <td>アスパラ-CA錠 200mg</td>
+        <td>-481</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>14</td>
+        <td>495</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000073</td>
+        <td>1-115</td>
+        <td>アドナ錠 30mg</td>
+        <td>-89</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>89</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000132</td>
+        <td><span class='bold-col'>1-116</span></td>
+        <td><span class='bold-col'>アルダクトンA錠 25mg</span></td>
+        <td><span class='bold-col'>208</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>276</td>
+        <td>68</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000170</td>
+        <td>1-117</td>
+        <td>アロプリノール錠 100mg 「ニプロ」</td>
+        <td>0</td>
+        <td>0</td>
+        <td></td>
+        <td>25</td>
+        <td>25</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002374</td>
+        <td>1-118</td>
+        <td>ウルソデ オキシコール酸錠 100mg 「トーワ</td>
+        <td>-118</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>141</td>
+        <td>259</td>
+        <td>2025/07/15</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000312</td>
+        <td>1-119</td>
+        <td>エチゾラム錠1mg</td>
+        <td>7</td>
+        <td>0</td>
+        <td></td>
+        <td>24</td>
+        <td>17</td>
+        <td>2025/09/17</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002522</td>
+        <td><span class='bold-col'>1-122</span></td>
+        <td><span class='bold-col'>モサプリドクエン酸塩錠5mg「日医工</span></td>
+        <td><span class='bold-col'>128</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>275</td>
+        <td>147</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>000478</td>
+        <td>1-123</td>
+        <td>カルバマゼピン錠 200mg 「アメル」</td>
+        <td>-35</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>35</td>
+        <td>2025/05/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000482</td>
+        <td><span class='bold-col'>1-124</span></td>
+        <td><span class='bold-col'>カルボシステイン錠250mg</span></td>
+        <td><span class='bold-col'>199</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>475</td>
+        <td>276</td>
+        <td>2025/10/23</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000489</td>
+        <td><span class='bold-col'>1-125</span></td>
+        <td><span class='bold-col'>カロナール錠 200mg</span></td>
+        <td><span class='bold-col'>318</span></td>
+        <td><span class='replenish-highlight'>400</span></td>
+        <td></td>
+        <td>334</td>
+        <td>16</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002383</td>
+        <td>1-127</td>
+        <td>ニセルゴリン錠 5mg「トーワ」</td>
+        <td>-43</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>43</td>
+        <td>2025/04/14</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003189</td>
+        <td><span class='bold-col'>1-128</span></td>
+        <td><span class='bold-col'>テルミサルタン錠 40mg「トーワ」</span></td>
+        <td><span class='bold-col'>195</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>226</td>
+        <td>31</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002869</td>
+        <td><span class='bold-col'>1-129</span></td>
+        <td><span class='bold-col'>ベオーバ錠 50mg</span></td>
+        <td><span class='bold-col'>128</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>157</td>
+        <td>29</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002392</td>
+        <td>1-131</td>
+        <td>イミダプリル塩酸塩錠5mg「トーワ」</td>
+        <td>14</td>
+        <td>0</td>
+        <td></td>
+        <td>21</td>
+        <td>7</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002425</td>
+        <td>1-133</td>
+        <td>プランルカストカプセル 112.5mg「サワイ」</td>
+        <td>-39</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>39</td>
+        <td>2025/06/11</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003103</td>
+        <td><span class='bold-col'>1-134</span></td>
+        <td><span class='bold-col'>プレガバリンOD錠 75mg「サワイ」</span></td>
+        <td><span class='bold-col'>208</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>321</td>
+        <td>113</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003102</td>
+        <td><span class='bold-col'>1-135</span></td>
+        <td><span class='bold-col'>プレガバリンOD錠 25mg「サワイ」</span></td>
+        <td><span class='bold-col'>123</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>126</td>
+        <td>3</td>
+        <td>2025/10/24</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002785</td>
+        <td>1-136</td>
+        <td>トラネキサム酸カプセル250mg 「トーワ」</td>
+        <td>-13</td>
+        <td>0</td>
+        <td></td>
+        <td>148</td>
+        <td>161</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>000985</td>
+        <td>1-144</td>
+        <td>デパケンR錠 200mg</td>
+        <td>194</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>215</td>
+        <td>21</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001071</td>
+        <td><span class='bold-col'>1-147</span></td>
+        <td><span class='bold-col'>ニコランジル錠 5mg「トーワ」</span></td>
+        <td><span class='bold-col'>242</span></td>
+        <td><span class='replenish-highlight'>300</span></td>
+        <td></td>
+        <td>272</td>
+        <td>30</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003168</td>
+        <td>1-148</td>
+        <td>ロサルタンK錠 50mg「DSEP」</td>
+        <td>9</td>
+        <td>0</td>
+        <td></td>
+        <td>51</td>
+        <td>42</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001146</td>
+        <td>1-149</td>
+        <td>バイアスピリン錠 100mg</td>
+        <td>177</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>660</td>
+        <td>483</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002330</td>
+        <td>1-151</td>
+        <td>ラベプラゾールNa塩錠10mg「明治」</td>
+        <td>177</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>272</td>
+        <td>95</td>
+        <td>2025/10/30</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001333</td>
+        <td><span class='bold-col'>1-154</span></td>
+        <td><span class='bold-col'>プラバスタチンNa錠 10mg「ケミファ」</span></td>
+        <td><span class='bold-col'>44</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>130</td>
+        <td>86</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003537</td>
+        <td>1-156</td>
+        <td>トリクロルメチアジド2mg「NIG」</td>
+        <td>-17</td>
+        <td>0</td>
+        <td></td>
+        <td>15</td>
+        <td>32</td>
+        <td>2025/06/17</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001367</td>
+        <td>1-157</td>
+        <td>プレドニゾロン錠5mg「タケダ」</td>
+        <td>849</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>1162</td>
+        <td>313</td>
+        <td>2025/10/22</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002265</td>
+        <td>1-158</td>
+        <td>沈降炭酸カルシウム錠500mg「三</td>
+        <td>-34</td>
+        <td>0</td>
+        <td></td>
+        <td>31</td>
+        <td>65</td>
+        <td>2025/07/01</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002402</td>
+        <td><span class='bold-col'>1-161</span></td>
+        <td><span class='bold-col'>アンブロキソール塩酸塩錠15mg「トーワ</span></td>
+        <td><span class='bold-col'>174</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td>上限100錠</td>
+        <td>184</td>
+        <td>10</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002506</td>
+        <td>1-162</td>
+        <td>ロフラゼフ酸エチル錠1mg「トーワ」</td>
+        <td>11</td>
+        <td>0</td>
+        <td></td>
+        <td>15</td>
+        <td>4</td>
+        <td>2025/08/05</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001644</td>
+        <td>1-163</td>
+        <td>メチコバール錠500μg</td>
+        <td>300</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>660</td>
+        <td>360</td>
+        <td>2025/10/28</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001637</td>
+        <td><span class='bold-col'>1-164</span></td>
+        <td><span class='bold-col'>メジコン錠15mg</span></td>
+        <td><span class='bold-col'>95</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>123</td>
+        <td>28</td>
+        <td>2025/10/08</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002819</td>
+        <td><span class='bold-col'>1-165</span></td>
+        <td><span class='bold-col'>ベタヒスチンメシル酸塩錠6mg「トーワ」</span></td>
+        <td><span class='bold-col'>92</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>112</td>
+        <td>20</td>
+        <td>2025/10/04</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003333</td>
+        <td><span class='bold-col'>1-166</span></td>
+        <td><span class='bold-col'>タリージOD錠5mg</span></td>
+        <td><span class='bold-col'>92</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>348</td>
+        <td>256</td>
+        <td>2025/10/06</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001276</td>
+        <td><span class='bold-col'>1-167</span></td>
+        <td><span class='bold-col'>ファモチジンD錠10mg「EMEC」</span></td>
+        <td><span class='bold-col'>76</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>78</td>
+        <td>2</td>
+        <td>2025/10/21</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001277</td>
+        <td><span class='bold-col'>1-168</span></td>
+        <td><span class='bold-col'>ファモチジンD錠20mg「EMEC」</span></td>
+        <td><span class='bold-col'>79</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>84</td>
+        <td>5</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002400</td>
+        <td>1-169</td>
+        <td>ポラプレジンクOD錠75mg「サワイ」</td>
+        <td>-47</td>
+        <td>0</td>
+        <td></td>
+        <td>133</td>
+        <td>180</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002500</td>
+        <td><span class='bold-col'>1-170</span></td>
+        <td><span class='bold-col'>ジルチアセム塩酸塩Rカプセル100mg</span></td>
+        <td><span class='bold-col'>76</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>81</td>
+        <td>5</td>
+        <td>2025/10/24</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001810</td>
+        <td>1-171</td>
+        <td>レボトミン錠25mg</td>
+        <td>-38</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>38</td>
+        <td>2025/02/26</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001780</td>
+        <td>1-173</td>
+        <td>ルプラック錠8mg</td>
+        <td>-24</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>24</td>
+        <td>2025/02/26</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>001751</td>
+        <td>1-178</td>
+        <td>リボトリール錠 0.5mg</td>
+        <td>-218</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>277</td>
+        <td>495</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001784</td>
+        <td>1-179</td>
+        <td>レキソタン錠 5mg</td>
+        <td>-4</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>4</td>
+        <td>2024/06/19</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002263</td>
+        <td>1-180</td>
+        <td>リマプロストアルファデクス錠 5μg</td>
+        <td>18</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>166</td>
+        <td>148</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003144</td>
+        <td>1-181</td>
+        <td>レバミピド錠 100mg「オーツカ」</td>
+        <td>-150</td>
+        <td>0</td>
+        <td></td>
+        <td>86</td>
+        <td>236</td>
+        <td>2025/09/01</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001830</td>
+        <td>1-182</td>
+        <td>ロキソプロフェンNa錠60mg「トーワ」</td>
+        <td>-110</td>
+        <td>0</td>
+        <td></td>
+        <td>113</td>
+        <td>223</td>
+        <td>2025/09/01</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001850</td>
+        <td>1-184</td>
+        <td>ロラゼパム錠 0.5mg「サワイ」</td>
+        <td>-5</td>
+        <td>0</td>
+        <td></td>
+        <td>10</td>
+        <td>15</td>
+        <td>2025/10/11</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003145</td>
+        <td><span class='bold-col'>1-185</span></td>
+        <td><span class='bold-col'>アトルバスタチン錠 10mg「NP」</span></td>
+        <td><span class='bold-col'>97</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>185</td>
+        <td>88</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001124</td>
+        <td><span class='bold-col'>1-186</span></td>
+        <td><span class='bold-col'>ノイロトロピン錠 4単位</span></td>
+        <td><span class='bold-col'>179</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>251</td>
+        <td>72</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002580</td>
+        <td><span class='bold-col'>1-187</span></td>
+        <td><span class='bold-col'>カルベジロール錠 2.5mg「サワイ」</span></td>
+        <td><span class='bold-col'>216</span></td>
+        <td><span class='replenish-highlight'>300</span></td>
+        <td></td>
+        <td>244</td>
+        <td>28</td>
+        <td>2025/10/30</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000311</td>
+        <td><span class='bold-col'>1-189</span></td>
+        <td><span class='bold-col'>エチゾラム錠0.5mg</span></td>
+        <td><span class='bold-col'>183</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>205</td>
+        <td>22</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>000477</td>
+        <td>1-191</td>
+        <td>カルバマセピン錠 100mg「アメル」</td>
+        <td>-371</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>31</td>
+        <td>402</td>
+        <td>2025/06/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001368</td>
+        <td>1-194</td>
+        <td>プレドニゾロン錠 1mg</td>
+        <td>-184</td>
+        <td>0</td>
+        <td></td>
+        <td>79</td>
+        <td>263</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001783</td>
+        <td>1-197</td>
+        <td>レキソタン錠 2mg</td>
+        <td>-28</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>28</td>
+        <td>2024/06/19</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001812</td>
+        <td><span class='bold-col'>1-199</span></td>
+        <td><span class='bold-col'>レボトミン錠 5mg</span></td>
+        <td><span class='bold-col'>83</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>85</td>
+        <td>2</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>001855</td>
+        <td>1-200</td>
+        <td>ワーファリン錠 1mg</td>
+        <td>-164</td>
+        <td>0</td>
+        <td></td>
+        <td>3</td>
+        <td>167</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001681</td>
+        <td><span class='bold-col'>1-201</span></td>
+        <td><span class='bold-col'>ユベラNカプ セル 100mg</span></td>
+        <td><span class='bold-col'>68</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>195</td>
+        <td>127</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001227</td>
+        <td><span class='bold-col'>1-202</span></td>
+        <td><span class='bold-col'>ビオスリー配合錠</span></td>
+        <td><span class='bold-col'>116</span></td>
+        <td><span class='replenish-highlight'>126</span></td>
+        <td>21錠シート</td>
+        <td>144</td>
+        <td>28</td>
+        <td>2025/10/28</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002187</td>
+        <td>1-203</td>
+        <td>ランソプラゾールOD錠15mg「トーワ」</td>
+        <td>1043</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>1341</td>
+        <td>298</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003286</td>
+        <td><span class='bold-col'>1-215</span></td>
+        <td><span class='bold-col'>ラメルテオン錠 8mg「武田テバ」</span></td>
+        <td><span class='bold-col'>41</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>87</td>
+        <td>46</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003096</td>
+        <td><span class='bold-col'>1-217</span></td>
+        <td><span class='bold-col'>エンレスト錠 100mg</span></td>
+        <td><span class='bold-col'>182</span></td>
+        <td><span class='replenish-highlight'>200</span></td>
+        <td></td>
+        <td>266</td>
+        <td>84</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002438</td>
+        <td><span class='bold-col'>1-218</span></td>
+        <td><span class='bold-col'>アシクロビル錠 200mg「トーワ」</span></td>
+        <td><span class='bold-col'>79</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>94</td>
+        <td>15</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003027</td>
+        <td><span class='bold-col'>1-219</span></td>
+        <td><span class='bold-col'>エゼチミブ錠 10mg「YD」</span></td>
+        <td><span class='bold-col'>245</span></td>
+        <td><span class='replenish-highlight'>300</span></td>
+        <td></td>
+        <td>271</td>
+        <td>26</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002917</td>
+        <td>1-220</td>
+        <td>テオフィリン徐放錠 100mg「サワイ」</td>
+        <td>-126</td>
+        <td>0</td>
+        <td></td>
+        <td>1</td>
+        <td>127</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003282</td>
+        <td><span class='bold-col'>1-221</span></td>
+        <td><span class='bold-col'>エンレスト錠 200mg</span></td>
+        <td><span class='bold-col'>112</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>168</td>
+        <td>56</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>001716</td>
+        <td><span class='bold-col'>1-222</span></td>
+        <td><span class='bold-col'>リオナ錠 250mg</span></td>
+        <td><span class='bold-col'>82</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>92</td>
+        <td>10</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>000982</td>
+        <td><span class='bold-col'>1-223</span></td>
+        <td><span class='bold-col'>(糖)テネリア錠 20mg</span></td>
+        <td><span class='bold-col'>68</span></td>
+        <td><span class='replenish-highlight'>100</span></td>
+        <td></td>
+        <td>184</td>
+        <td>116</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002842</td>
+        <td>1-224</td>
+        <td>(糖)フォシーガ錠 5mg</td>
+        <td>-81</td>
+        <td>0</td>
+        <td></td>
+        <td>193</td>
+        <td>274</td>
+        <td>2025/10/09</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002406</td>
+        <td><span class='bold-col'>1-225</span></td>
+        <td><span class='bold-col'>(糖)ジャディアンス錠 10mg</span></td>
+        <td><span class='bold-col'>45</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>163</td>
+        <td>118</td>
+        <td>2025/10/02</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002774</td>
+        <td><span class='bold-col'>1-227</span></td>
+        <td><span class='bold-col'>フロセミド錠 20mg「NP」</span></td>
+        <td><span class='bold-col'>119</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>145</td>
+        <td>26</td>
+        <td>2025/10/28</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>003599</td>
+        <td><span class='bold-col'>1-228</span></td>
+        <td><span class='bold-col'>ドパコール配合錠L 50</span></td>
+        <td><span class='bold-col'>116</span></td>
+        <td><span class='replenish-highlight'>150</span></td>
+        <td></td>
+        <td>119</td>
+        <td>3</td>
+        <td>2025/10/31</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>003288</td>
+        <td>1-229</td>
+        <td>フルコナゾールカプセル 50mg「F」</td>
+        <td>-2</td>
+        <td>0</td>
+        <td></td>
+        <td>0</td>
+        <td>2</td>
+        <td>2025/08/28</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>003622</td>
+        <td>1-230</td>
+        <td>ロスバスタチン錠 2.5mg「トーワ」</td>
+        <td>282</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>520</td>
+        <td>238</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>003085</td>
+        <td>1-231</td>
+        <td>ピタバスタチンCa・OD錠 1mg「トーワ」</td>
+        <td>915</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>1035</td>
+        <td>120</td>
+        <td>2025/10/30</td>
+    </tr>
+
+    <tr class='highlight'>
+        <td>002188</td>
+        <td><span class='bold-col'>1-233</span></td>
+        <td><span class='bold-col'>ランソプラゾールOD錠30mg「トーワ」</span></td>
+        <td><span class='bold-col'>47</span></td>
+        <td><span class='replenish-highlight'>50</span></td>
+        <td></td>
+        <td>53</td>
+        <td>6</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>003201</td>
+        <td>1-234</td>
+        <td>レバチラセタム錠 500mg「日医工」</td>
+        <td>336</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>358</td>
+        <td>22</td>
+        <td>2025/10/15</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002282</td>
+        <td>1-235</td>
+        <td>シロスタゾールOD錠 100mg「トーワ」</td>
+        <td>-48</td>
+        <td>0</td>
+        <td></td>
+        <td>38</td>
+        <td>86</td>
+        <td>2025/09/02</td>
+    </tr>
+
+    <tr class='blue'>
+        <td>002291</td>
+        <td>1-236</td>
+        <td>ドパコール配合錠L 100</td>
+        <td>-37</td>
+        <td>B</td>
+        <td>バラ錠あり</td>
+        <td>575</td>
+        <td>612</td>
+        <td>2025/10/29</td>
+    </tr>
+
+    <tr class='noneed'>
+        <td>002644</td>
+        <td>1-237</td>
+        <td>カンデサルタンOD錠 8mg「サワイ」</td>
+        <td>13</td>
+        <td>0</td>
+        <td></td>
+        <td>85</td>
+        <td>72</td>
+        <td>2025/10/02</td>
+    </tr>
+</tbody></table>
+<p style='color:#555;text-align:right;font-size:8pt;margin-top:8px;'>
+※ 使用量（月平均）は 2ヶ月分の使用量を集計し、1ヶ月あたりに換算しています。<br>
+※ 黄色行は補充対象、青文字はバラ錠扱いです。
+</p>
+</body></html>
