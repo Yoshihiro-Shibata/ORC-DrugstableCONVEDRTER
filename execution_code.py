@@ -84,246 +84,33 @@ result = process_all_images(input_root, export_root, cut_rows_dir, folders)
 
 
 # ===============================
-# 📘 Step 1: GPT-4 Vision APIで表画像の文字起こし（複数画像対応・コスト算出付き）
+# 📘 Step 1: OCR処理（ラベル分岐版・モジュール化・2回実行）
 # ===============================
+# 🔹 utils.ocr_processing モジュールを使用
+# 信頼性向上のため、異なるモデルで2回OCRを実行し、結果を保存する
+# 1回目: gpt-4.1-mini (軽量・高速)
+# 2回目: gpt-4o (高精度・変化をつける)
 
-# --- 1️⃣ APIクライアントを初期化 ---
-client = OpenAI()
-
-# --- 2️⃣ OCR対象フォルダを指定 ---
-folder_path = "cut_rows"
-
-# --- 3️⃣ OCRプロンプト設定（Information版） ---
-prompt_text_information = """
-PDFもしくは画像データを文字起こしします。
-文字起こしするデータは表形式で、列は以下の6列です。
-カセットNo. / 薬品コード / 薬品名称 / 現在量 / 警告量 / 前回登録日
-
-文字起こしする際、以下のルールに従ってください。
-・カセットNo.は1-から始まる5桁のデータ（例: 1-001）
-・薬品コードは6桁の半角数字で、00から始まります。
-・薬品名称はカタカナは半角、漢字は全角で正確に記載。
-・現在量と警告量は半角数字。
-・前回登録日はYYYY/MM/DD形式。
-・各列のデータは必ず,で区切ってください(csv形式で出力）。
-・表のデータ以外（画像名や「文字起こししました」等の文章）は一切含めないでください。
-・万が一、データが不明瞭で読み取れない場合は「不明」と記載してください。
-"""
-
-# --- 4️⃣ 画像ファイルの一覧を取得（Information版） ---
-# folder_path にあるファイル名一覧から、Information 用の画像ファイル名だけを抽出します。
-# ・os.listdir(folder_path) はフォルダ内のエントリ名（ファイル名・ディレクトリ名）を返す
-# ・f.lower() で小文字化して拡張子・キーワードを大文字小文字問わず判定する
-# ・endswith((".jpg", ".jpeg", ".png")) で画像拡張子のみを許可
-# ・"information" in f.lower() でファイル名に "information" が含まれるものだけを選択
-# ・os.path.isfile(...) でディレクトリを除外し、実際のファイルのみ対象にする
-image_files_information = [
-    f
-    for f in os.listdir(folder_path)
-    if (
-        f.lower().endswith((".jpg", ".jpeg", ".png"))
-        and "information" in f.lower()
-        and os.path.isfile(os.path.join(folder_path, f))
-    )
-]
-
-# --- 5️⃣ 結果格納用のリストを作成 ---
-# OCRの結果を格納するリストと、トークン使用量を合計する変数を初期化します。
-results_information = []
-total_prompt_tokens_information = 0
-total_completion_tokens_information = 0
-
-# --- 6️⃣ 各画像に対してOCR実行（Information版） ---
-# image_files_information に含まれる各画像ファイルについてループし、
-# GPT-4 Vision（chat.completions）にbase64埋め込み画像を投げてOCRを実行します。
-for image_file in image_files_information:
-    # 画像ファイルのフルパスを組み立て
-    image_path = os.path.join(folder_path, image_file)
-
-    # 画像ファイルをバイナリで読み込み、Base64エンコードする
-    # OpenAIのVision入力では data:image/jpeg;base64,.... の形式で渡す想定
-    with open(image_path, "rb") as f:
-        img_bytes = f.read()
-    img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-
-    # OpenAIクライアントにリクエストを送信
-    # model は Vision 対応の軽量モデル "gpt-4.1-mini" を指定
-    # messages の中で system と user を渡し、user にテキストプロンプトと画像を含める
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",  # Vision対応軽量モデル
-        messages=[
-            {
-                "role": "system",
-                "content": "あなたは正確なOCR変換を行う日本語文字認識エンジンです。",
-            },
-            {
-                # user メッセージの content に配列を渡す方式（テキストと画像URLを混在）
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt_text_information},
-                    {
-                        # data URI スキームで base64 埋め込み画像を送信
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"},
-                    },
-                ],
-            },
-        ],
-        max_tokens=2000,
-    )
-
-    # --- OCR結果を取得 ---
-    # API応答の先頭候補（choices[0]）からメッセージ本文を取り出す
-    text_result = response.choices[0].message.content
-
-    # --- トークン使用量を加算 ---
-    # response.usage に含まれる prompt_tokens と completion_tokens を合算して後でコスト計算に使用
-    usage = response.usage
-    total_prompt_tokens_information += usage.prompt_tokens
-    total_completion_tokens_information += usage.completion_tokens
-
-    # --- 結果をリストに追加 ---
-    # 各画像ごとにファイル名・OCRテキスト・トークン情報を辞書形式で保存
-    results_information.append(
-        {
-            "ファイル名": image_file,
-            "文字起こし結果": text_result,
-            "入力トークン": usage.prompt_tokens,
-            "出力トークン": usage.completion_tokens,
-            "合計トークン": usage.total_tokens,
-        }
-    )
-
-# --- 7️⃣ DataFrame化して表で出力 ---
-# OCR結果リストを pandas DataFrame に変換して、内容を表示
-df_results_information = pd.DataFrame(results_information)
-print("📋 OCR結果（Information、各画像ごと）:")
-print(df_results_information.to_string(index=False))
-
-# --- 8️⃣ トークン総計とコスト計算 ---
-# 合計トークン数を表示（後で任意のレートでコスト算出可能）
-total_tokens_information = (
-    total_prompt_tokens_information + total_completion_tokens_information
-)
-
-print("\n📊 トークン使用量（Information、合計）:")
-print(f"入力トークン（prompt）: {total_prompt_tokens_information}")
-print(f"出力トークン（completion）: {total_completion_tokens_information}")
-print(f"合計トークン: {total_tokens_information}")
-
-# --- 結果出力先フォルダを作成 ---
-# export/result フォルダに保存するため、ディレクトリを作成（存在してもエラーにならない）
 result_dir = Path("export") / "result"
-result_dir.mkdir(parents=True, exist_ok=True)
 
-# --- CSV出力パスを指定 ---
-output_csv_information = result_dir / "ocr_results_information.csv"
-
-# --- CSV保存 ---
-df_results_information.to_csv(output_csv_information, index=False, encoding="utf-8-sig")
-
-print(f"\n📁 OCR結果をCSVに保存しました: {output_csv_information.resolve()}")
-
-# ===============================
-# 📘 GPT-4 Vision APIで表画像の文字起こし（Usage版）
-# ===============================
-
-# --- 3️⃣ OCRプロンプト設定（Usage版） ---
-prompt_text_usage = """
-PDFもしくは画像データを文字起こしします。
-文字起こしするデータは表形式で、列は以下の4列です。
-薬品コード / 剤 / 薬品名称 / 使用量
-
-文字起こしする際、以下のルールに従ってください。
-・薬品コードは6桁の半角数字で、00から始まります。
-・薬品名称はカタカナは半角、漢字は全角で正確に記載。
-・使用量は半角数字。
-・各列のデータは必ず,で区切ってください(csv形式で出力）。
-・表のデータ以外（画像名や「文字起こししました」等の文章）は一切含めないでください。
-・万が一読み取れない場合は「不明」と記載してください。
-"""
-
-# --- 4️⃣ 画像ファイルの一覧を取得（Usage版） ---
-image_files_usage = [
-    f
-    for f in os.listdir(folder_path)
-    if f.lower().endswith((".jpg", ".jpeg", ".png")) and "usage" in f.lower()
+# OCR設定（回数とモデルの組み合わせ）
+ocr_configs = [
+    {"time": 1, "model": "gpt-4.1-mini"},
+    {"time": 2, "model": "gpt-4o"},
 ]
 
-# --- 5️⃣ 結果格納用のリストを作成 ---
-results_usage = []
-total_prompt_tokens_usage = 0
-total_completion_tokens_usage = 0
+ocr_results_list = []
 
-# --- 6️⃣ 各画像に対してOCR実行（Usage版） ---
-for image_file in image_files_usage:
-    image_path = os.path.join(folder_path, image_file)
-
-    with open(image_path, "rb") as f:
-        img_bytes = f.read()
-    img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",  # ✅ Vision対応軽量モデル
-        messages=[
-            {
-                "role": "system",
-                "content": "あなたは正確なOCR変換を行う日本語文字認識エンジンです。",
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt_text_usage},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"},
-                    },
-                ],
-            },
-        ],
-        max_tokens=2000,
+for config in ocr_configs:
+    print(f"\n🔄 OCR実行 {config['time']}回目 (モデル: {config['model']})...")
+    ocr_result = process_ocr_by_label(
+        cut_rows_dir, result_dir, model=config["model"], time=config["time"]
     )
+    ocr_results_list.append(ocr_result)
 
-    # --- OCR結果を取得 ---
-    text_result = response.choices[0].message.content
-
-    # --- トークン使用量を加算 ---
-    usage = response.usage
-    total_prompt_tokens_usage += usage.prompt_tokens
-    total_completion_tokens_usage += usage.completion_tokens
-
-    # --- 結果をリストに追加 ---
-    results_usage.append(
-        {
-            "ファイル名": image_file,
-            "文字起こし結果": text_result,
-            "入力トークン": usage.prompt_tokens,
-            "出力トークン": usage.completion_tokens,
-            "合計トークン": usage.total_tokens,
-        }
-    )
-
-# --- 7️⃣ DataFrame化して表で出力 ---
-df_results_usage = pd.DataFrame(results_usage)
-print("📋 OCR結果（Usage、各画像ごと）:")
-print(df_results_usage.to_string(index=False))
-
-# --- 8️⃣ トークン総計とコスト計算 ---
-total_tokens_usage = total_prompt_tokens_usage + total_completion_tokens_usage
-
-print("\n📊 トークン使用量（Usage、合計）:")
-print(f"入力トークン（prompt）: {total_prompt_tokens_usage}")
-print(f"出力トークン（completion）: {total_completion_tokens_usage}")
-print(f"合計トークン: {total_tokens_usage}")
-
-
-# --- CSV出力パスを指定 ---
-output_csv_usage = result_dir / "Usage.csv"
-
-# --- CSV保存 ---
-df_results_usage.to_csv(output_csv_usage, index=False, encoding="utf-8-sig")
-
-print(f"\n📁 OCR結果をCSVに保存しました: {output_csv_usage.resolve()}")
+# 後続処理のために、とりあえず1回目の結果を使用する（または比較ロジックをここに実装する）
+# 現時点では1回目の結果（ocr_results_list[0]）を使って後続のCSV整形を行う
+ocr_result = ocr_results_list[0]
 
 # ============================================
 # OCR文字起こしの整形 → 表（6列 or 4列）に変換＋自動補正＋半角カタカナ→全角変換
@@ -520,8 +307,12 @@ def process_ocr_csv(csv_path, label):
 
 
 # --- 関数呼び出し部分 ---
-process_ocr_csv(r"export/result/ocr_results_information.csv", "Information")
-process_ocr_csv(r"export/result/Usage.csv", "Usage")
+# モジュールの戻り値からCSVパスを取得して処理（ファイルが存在する場合のみ実行）
+if ocr_result["information_csv"]:
+    process_ocr_csv(ocr_result["information_csv"], "Information")
+
+if ocr_result["usage_csv"]:
+    process_ocr_csv(ocr_result["usage_csv"], "Usage")
 
 # ============================================
 # 💊 Information.csv と Usage.csv のマージ処理

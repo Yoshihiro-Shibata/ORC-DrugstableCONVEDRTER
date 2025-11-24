@@ -85,23 +85,25 @@ def encode_image_to_base64(image_path):
             h, w = img.shape[:2]
             aspect_ratio = w / h if h > 0 else 0
             print(f"🔍 [DEBUG] 画像解像度: {w}x{h} (アスペクト比: {aspect_ratio:.2f})")
-            
+
             # 警告：アスペクト比が極端な場合（横長すぎる場合）
             if aspect_ratio > 4.0:
-                print(f"⚠️ [WARNING] アスペクト比が非常に横長です。APIによる自動拡大でトークンが急増している可能性があります。")
+                print(
+                    f"⚠️ [WARNING] アスペクト比が非常に横長です。APIによる自動拡大でトークンが急増している可能性があります。"
+                )
     except Exception as e:
         print(f"⚠️ [DEBUG] 画像解像度の取得に失敗: {e}")
 
     with open(image_path, "rb") as f:
         img_bytes = f.read()
-    
+
     # 🔹デバッグ用：画像サイズ（バイト数）を表示
     print(f"🔍 [DEBUG] 画像ファイルサイズ: {len(img_bytes)} bytes ({image_path})")
-    
+
     return base64.b64encode(img_bytes).decode("utf-8")
 
 
-def perform_ocr_on_image(client, image_path, label, model="gpt-4o-mini"):
+def perform_ocr_on_image(client, image_path, label, model="gpt-4.1-mini"):
     """
     単一の画像ファイルに対してOCR処理を実行する関数
 
@@ -109,7 +111,7 @@ def perform_ocr_on_image(client, image_path, label, model="gpt-4o-mini"):
         client (OpenAI): 初期化済みのOpenAIクライアント
         image_path (str): 画像ファイルのパス
         label (str): フォルダラベル（"information", "usage", "others"）
-        model (str): 使用するGPTモデル名（デフォルト: "gpt-4o-mini"）
+        model (str): 使用するGPTモデル名（デフォルト: "gpt-4.1-mini"）
 
     戻り値:
         dict: OCR処理の結果
@@ -148,10 +150,10 @@ def perform_ocr_on_image(client, image_path, label, model="gpt-4o-mini"):
     # 🔹デバッグ用：Base64文字列の長さを表示
     print(f"🔍 [DEBUG] Base64文字数: {len(img_base64)}")
 
-    # OpenAI APIにリクエストを送信
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
+    # APIリクエストのパラメータを構築
+    api_params = {
+        "model": model,
+        "messages": [
             {
                 "role": "system",
                 "content": "あなたは正確なOCR変換を行う日本語文字認識エンジンです。",
@@ -167,34 +169,43 @@ def perform_ocr_on_image(client, image_path, label, model="gpt-4o-mini"):
                 ],
             },
         ],
-        max_tokens=2000,
-    )
+    }
+
+    # モデル名に応じてトークン制限のパラメータ名を切り替え
+    # o1系列やgpt-5系列は max_completion_tokens を使用
+    if model.startswith("o1") or "gpt-5" in model:
+        api_params["max_completion_tokens"] = 5000
+    else:
+        # gpt-4, gpt-3.5 などは max_tokens を使用
+        api_params["max_tokens"] = 2000
+
+    # OpenAI APIにリクエストを送信
+    response = client.chat.completions.create(**api_params)
 
     # レスポンスからテキストとトークン情報を抽出
     text_result = response.choices[0].message.content
     usage = response.usage
 
     return {
-        "image_file": os.path.basename(image_path),
+        "ファイル名": os.path.basename(image_path),
         "label": label,
-        "text_result": text_result,
-        "prompt_tokens": usage.prompt_tokens,
-        "completion_tokens": usage.completion_tokens,
-        "total_tokens": usage.total_tokens,
+        "文字起こし結果": text_result,
+        "入力トークン": usage.prompt_tokens,
+        "出力トークン": usage.completion_tokens,
+        "合計トークン": usage.total_tokens,
     }
 
 
-def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4o-mini"):
+def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4.1-mini", time=1):
     """
     cut_rows_dir 内のすべての画像ファイルをスキャンし、
     ラベルに基づいて分岐処理でOCR実行・結果を保存する関数
 
     パラメータ:
         cut_rows_dir (str または Path): 切り抜き画像が格納されているディレクトリ
-            例: "cut_rows"
         output_dir (str または Path): OCR結果を保存するディレクトリ
-            例: Path("export") / "result"
-        model (str): 使用するGPTモデル名（デフォルト: "gpt-4o-mini"）
+        model (str): 使用するGPTモデル名（デフォルト: "gpt-4.1-mini"）
+        time (int): 実行回数（ファイル名に付与される）
 
     戻り値:
         dict: 処理結果の統計情報
@@ -276,12 +287,12 @@ def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4o-mini"):
             print(f"📦 [{idx}/{len(image_files)}] スキップ: {image_file} (対象外)")
             others_results.append(
                 {
-                    "image_file": image_file,
+                    "ファイル名": image_file,
                     "label": "others",
-                    "text_result": "",
-                    "prompt_tokens": 0,
-                    "completion_tokens": 0,
-                    "total_tokens": 0,
+                    "文字起こし結果": "",
+                    "入力トークン": 0,
+                    "出力トークン": 0,
+                    "合計トークン": 0,
                 }
             )
             continue
@@ -316,14 +327,14 @@ def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4o-mini"):
         print(f"\n📋 OCR結果（Information、全{len(information_results)}件）:")
         print(
             df_information[
-                ["image_file", "prompt_tokens", "completion_tokens", "total_tokens"]
+                ["ファイル名", "入力トークン", "出力トークン", "合計トークン"]
             ].to_string(index=False)
         )
 
         # トークン統計
-        total_prompt_info = df_information["prompt_tokens"].sum()
-        total_completion_info = df_information["completion_tokens"].sum()
-        total_tokens_info = df_information["total_tokens"].sum()
+        total_prompt_info = df_information["入力トークン"].sum()
+        total_completion_info = df_information["出力トークン"].sum()
+        total_tokens_info = df_information["合計トークン"].sum()
 
         print(f"\n📊 トークン使用量（Information、合計）:")
         print(f"   入力トークン: {total_prompt_info}")
@@ -331,7 +342,7 @@ def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4o-mini"):
         print(f"   合計トークン: {total_tokens_info}")
 
         # CSV保存
-        information_csv_path = output_path / "ocr_results_information.csv"
+        information_csv_path = output_path / f"ocr_results_information_{time}.csv"
         df_information.to_csv(information_csv_path, index=False, encoding="utf-8-sig")
         print(f"   📁 保存: {information_csv_path.resolve()}")
 
@@ -343,14 +354,14 @@ def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4o-mini"):
         print(f"\n📋 OCR結果（Usage、全{len(usage_results)}件）:")
         print(
             df_usage[
-                ["image_file", "prompt_tokens", "completion_tokens", "total_tokens"]
+                ["ファイル名", "入力トークン", "出力トークン", "合計トークン"]
             ].to_string(index=False)
         )
 
         # トークン統計
-        total_prompt_usage = df_usage["prompt_tokens"].sum()
-        total_completion_usage = df_usage["completion_tokens"].sum()
-        total_tokens_usage = df_usage["total_tokens"].sum()
+        total_prompt_usage = df_usage["入力トークン"].sum()
+        total_completion_usage = df_usage["出力トークン"].sum()
+        total_tokens_usage = df_usage["合計トークン"].sum()
 
         print(f"\n📊 トークン使用量（Usage、合計）:")
         print(f"   入力トークン: {total_prompt_usage}")
@@ -358,7 +369,7 @@ def process_ocr_by_label(cut_rows_dir, output_dir, model="gpt-4o-mini"):
         print(f"   合計トークン: {total_tokens_usage}")
 
         # CSV保存
-        usage_csv_path = output_path / "ocr_results_usage.csv"
+        usage_csv_path = output_path / f"ocr_results_usage_{time}.csv"
         df_usage.to_csv(usage_csv_path, index=False, encoding="utf-8-sig")
         print(f"   📁 保存: {usage_csv_path.resolve()}")
 
