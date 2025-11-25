@@ -174,7 +174,7 @@ def perform_ocr_on_image(client, image_path, label, model="gpt-4.1-mini"):
     # モデル名に応じてトークン制限のパラメータ名を切り替え
     # o1系列やgpt-5系列は max_completion_tokens を使用
     if model.startswith("o1") or "gpt-5" in model:
-        api_params["max_completion_tokens"] = 5000
+        api_params["max_completion_tokens"] = 2000
     else:
         # gpt-4, gpt-3.5 などは max_tokens を使用
         api_params["max_tokens"] = 2000
