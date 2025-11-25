@@ -67,8 +67,10 @@ def generate_merge_report(output_dir: Path, month_count: int, master_csv_path: P
 
         # 個別ルール
         upperLimit100 = ["002402"]
+        upperLimit200 = ["000490"]
         multiple21 = ["001227"]
-        multiple14 = ["003035", "003084"]
+        multiple14 = ["003084"]
+        multiple56 = ["003035"]
         skipCalc = [
             "000113",
             "001649",
@@ -94,12 +96,17 @@ def generate_merge_report(output_dir: Path, month_count: int, master_csv_path: P
             "003085",
             "003201",
             "002291",
+            "000482",    
         ]
 
         if row["薬品コード"] in upperLimit100:
             if replenish > 100:
                 replenish = 100
             note = "上限100錠"
+        elif row["薬品コード"] in upperLimit200:
+            if replenish > 200:
+                replenish = 200
+            note = "上限200錠"
         elif row["薬品コード"] in multiple21:
             unit = 21
             replenish = math.ceil(diff / unit) * unit
@@ -108,6 +115,10 @@ def generate_merge_report(output_dir: Path, month_count: int, master_csv_path: P
             unit = 14
             replenish = math.ceil(diff / unit) * unit
             note = "14錠シート"
+        elif row["薬品コード"] in multiple56:
+            unit = 56
+            replenish = math.ceil(diff / unit) * unit
+            note = "56錠/箱"
         elif row["薬品コード"] in skipCalc:
             replenish = "B"
             note = "バラ錠あり"
@@ -554,7 +565,7 @@ tr.noneed td { opacity: 0.6; }
 {html_table}
 <p style='color:#555;text-align:right;font-size:8pt;margin-top:8px;'>
 ※ 使用量（月平均）は {month_count}ヶ月分の使用量を集計し、1ヶ月あたりに換算しています。<br>
-※ 黄色行は補充対象、青文字はバラ錠扱いです。
+※ 黄色行は補充対象、青文字はバラ錠有りです。
 </p>
 </body></html>
 """
