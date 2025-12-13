@@ -68,6 +68,7 @@ def generate_merge_report(output_dir: Path, month_count: int, master_csv_path: P
         # 個別ルール
         upperLimit100 = ["002402"]
         upperLimit200 = ["000490"]
+        upperLimit300 = ["000489","000336"]  # 上限300錠の薬品コードをここに追加
         multiple21 = ["001227"]
         multiple14 = ["003084"]
         multiple56 = ["003035"]
@@ -96,28 +97,56 @@ def generate_merge_report(output_dir: Path, month_count: int, master_csv_path: P
             "003085",
             "003201",
             "002291",
-            "000482",    
+            "000482",
         ]
 
         if row["薬品コード"] in upperLimit100:
-            if replenish > 100:
-                replenish = 100
+            current_amount = row["現在量"] if pd.notna(row["現在量"]) else 0
+            if (replenish + current_amount) > 100:
+                # 100 - 現在量 を計算
+                max_replenish = 100 - current_amount
+                # 負の値にならないように調整（現在量が既に100超えの場合など）
+                if max_replenish < 0:
+                    max_replenish = 0
+                # 10の倍数に切り捨て (例: 48 -> 40)
+                replenish = math.floor(max_replenish / 10) * 10
             note = "上限100錠"
         elif row["薬品コード"] in upperLimit200:
-            if replenish > 200:
-                replenish = 200
+            current_amount = row["現在量"] if pd.notna(row["現在量"]) else 0
+            if (replenish + current_amount) > 200:
+                max_replenish = 200 - current_amount
+                if max_replenish < 0:
+                    max_replenish = 0
+                replenish = math.floor(max_replenish / 10) * 10
             note = "上限200錠"
+        elif row["薬品コード"] in upperLimit300:
+            current_amount = row["現在量"] if pd.notna(row["現在量"]) else 0
+            if (replenish + current_amount) > 300:
+                max_replenish = 300 - current_amount
+                if max_replenish < 0:
+                    max_replenish = 0
+                replenish = math.floor(max_replenish / 10) * 10
+            note = "上限300錠"
         elif row["薬品コード"] in multiple21:
-            unit = 21
-            replenish = math.ceil(diff / unit) * unit
+            if diff < 30:
+                replenish = 0
+            else:
+                unit = 21
+                replenish = math.ceil(diff / unit) * unit
             note = "21錠シート"
         elif row["薬品コード"] in multiple14:
-            unit = 14
-            replenish = math.ceil(diff / unit) * unit
+            if diff < 30:
+                replenish = 0
+            else:
+                unit = 14
+                replenish = math.ceil(diff / unit) * unit
             note = "14錠シート"
         elif row["薬品コード"] in multiple56:
-            unit = 56
-            replenish = math.ceil(diff / unit) * unit
+            if diff < 30:
+                replenish = 0
+            else:
+                unit = 56
+                replenish = math.ceil(diff / unit) * unit
             note = "56錠/箱"
         elif row["薬品コード"] in skipCalc:
             replenish = "B"
